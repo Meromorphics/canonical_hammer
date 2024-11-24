@@ -9,7 +9,7 @@ Some examples use matplotlib.
 By default the exp module requires pytorch and tensorflow as well, but these parts can be deleted or commented out (they are there for testing purposes).
 
 TODO:
-Implement site-dependent interaction strength (*should* be quite easy).
+Implement chemical potential (*should* be somewhat easy).
 Make documentation.
 Organize code.
 Make Fortran io (take Hamiltonian/graph information printed from Python code here and put it in Fortran).
