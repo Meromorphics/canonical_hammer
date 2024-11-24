@@ -5,13 +5,8 @@ import numpy
 import time as timer
 import exp
 
-# Implements the Christandl hoppings to take an electron down a chain.
-# For example purposes, an up and down electron are taken down a chain,
-# since the interaction U = 0, each electron should move independently.
 
-# 1 --t1-- 2 --t2-- 3 --t3-- 4 -- ... -- tn-1 -- n
-
-n = 100
+n = 8
 nups = 1
 ndns = 1
 time = numpy.pi / 2
@@ -27,27 +22,45 @@ L = geom.Lattice(n)
 
 
 initial_state = geom.State(ups=(1,), dns=(1,))
-final_state = geom.State(ups=(n,), dns=(n,))
+final_state = geom.State(ups=(4,), dns=(4,))
 initial_index = B.index(initial_state)
 final_index = B.index(final_state)
 psi0 = numpy.zeros(B.N)
 psi0[initial_index-1] = 1
 
-print(B.N)
 
-for i in range(1, n):
-    L.sym_couple(i, i+1, f"t{i}")
-for i in range(1, n+1):
-    L.interaction(i, f"U{i}")
+L.sym_couple(1, 2, "t1")
+L.sym_couple(2, 3, "t2")
+L.sym_couple(3, 4, "t3")
+
+L.sym_couple(1, 5, "v1")
+L.sym_couple(2, 6, "v2")
+L.sym_couple(3, 7, "v3")
+L.sym_couple(4, 8, "v4")
+
+L.interaction(1, "Uc")
+L.interaction(2, "Uc")
+L.interaction(3, "Uc")
+L.interaction(4, "Uc")
+
+L.interaction(5, "Ud")
+L.interaction(6, "Ud")
+L.interaction(7, "Ud")
+L.interaction(8, "Ud")
 
 
 H = geom.Hamiltonian()
 
-for i in range(1, n):
-    H.ts[f"t{i}"] = numpy.sqrt(i * (n-i))
-for i in range(1, n+1):
-    H.Us[f"U{i}"] = U
+H.ts = {"t1": 418.87,
+        "t2": 1188.11,
+        "t3": 419.87,
+        "v1": 478.51,
+        "v2": 1292.36,
+        "v3": 1292.36,
+        "v4": 478.51}
 
+H.Us = {"Uc": 13683.6,
+        "Ud": 4014.55}
 
 
 start = timer.time()
@@ -63,9 +76,10 @@ finish = timer.time()
 print(f"Matrix made in {finish-start} seconds")
 
 start = timer.time()
-psi1 = exp.expA_v(H.H, psi0, -1.0j * time, "expm_multiply", traceA=H.trace())
+psi1 = exp.expA_v(H.H, psi0, -1.0j * time, "he_diag", traceA=H.trace())
 finish = timer.time()
 print(f"Exponential-vector product done in {finish-start} seconds")
 
 final_probability = abs(psi1[final_index-1]) ** 2
 print(f"Fidelity = {final_probability}")
+

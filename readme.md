@@ -4,18 +4,13 @@ This code originated as a test on what Graph data structure things I would have 
 
 The main file is geom.py. Note that sites are indexed starting at 1.
 
-Dependencies: networkx and numpy. Some examples use scipy and matplotlib.
+Dependencies: networkx, numpy, scipy.
+Some examples use matplotlib.
+By default the exp module requires pytorch and tensorflow as well, but these parts can be deleted or commented out (they are there for testing purposes).
 
-**TODO:**
-
-Implement faster new Hamiltonian construction: once one is made the places of the matrix entries should already be known (source: lazy implementation).
-
+TODO:
 Implement site-dependent interaction strength (*should* be quite easy).
-
 Make documentation.
-
 Organize code.
-
 Make Fortran io (take Hamiltonian/graph information printed from Python code here and put it in Fortran).
-
 Make better examples.

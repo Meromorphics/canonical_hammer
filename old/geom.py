@@ -99,9 +99,6 @@ class Lattice():
         self.couple(i, j, tij)
         self.couple(j, i, tji)
 
-    def interaction(self, i, U):
-        self.G.nodes[i]["U"] = U
-
 
 class Basis():
     def __init__(self, n, nups, ndns, zshift=1, ishift=1):
@@ -129,36 +126,61 @@ class Basis():
 
 class Hamiltonian():
     def __init__(self):
+        self.elements = []
         self.ts = dict()
-        self.Us = dict()
-
 
     def zero_H(self):
         self.H = numpy.zeros((self.n, self.n))
 
+    def make_H(self, fresh=True):
+        if fresh:
+            self.zero_H()
+        for i, j, tij in self.elements:
+            i = i - self.ishift
+            j = j - self.ishift
+            self.H[i, j] = tij
 
-    def print_matrix(self, ishift=0, values=False):
+    def print_matrix(self, ishift=0):
         for x in self.elements:
             y = x[:]
             y[0], y[1] = y[0] + ishift, y[1] + ishift
-            if values:
-                y[3] = self.ts[y[3]]
-            print(*y)
-        for x in self.diagelements:
-            y = x[:]
-            y[0] = y[0] + ishift
-            if values:
-                y[1] = self.Us[y[1]]
             print(*y)
 
+    def construct(self, U, L, B):
+        self.n = len(B.basis)
+        self.ishift = B.ishift
+        for state in B:
+            i = state.index
+            if hasattr(state, "ups"):
+                for up in state.ups:
+                    for _, j, edge_data in L.G.edges(up, data=True):
+                        hop_state = state.hopped_state("up", up, j)
+                        if (k := B.index(hop_state)) is not None:
+                            tij = edge_data["tij"]
+                            hopcount = state.hopover_count(hop_state, "up")
+                            sign = (-1) * ((-1) ** hopcount)
+                            self.elements.append([i, k, sign * tij])
 
-    def construct(self, L, B, has_U=True):
+            if hasattr(state, "dns"):
+                for dn in state.dns:
+                    for _, j, edge_data in L.G.edges(dn, data=True):
+                        hop_state = state.hopped_state("dn", dn, j)
+                        if (k := B.index(hop_state)) is not None:
+                            tij = edge_data["tij"]
+                            hopcount = state.hopover_count(hop_state, "dn")
+                            sign = (-1) * ((-1) ** hopcount)
+                            self.elements.append([i, k, sign * tij])
+
+            # diagonal U entries
+            if hasattr(state, "ups") and hasattr(state, "dns") and U != 0:
+                if ((count := len(set(state.ups).intersection(set(state.dns)))) != 0):
+                    self.elements.append([i, i, count * U])
+
+
+    def construct_ts(self, L, B, has_U=True):
         self.n = len(B.basis)
         self.ishift = B.ishift
         self.diagcount = 0
-        self.elements = []
-        self.diagelements = []
-        self.diagentries = dict()
         for state in B:
             i = state.index
             if hasattr(state, "ups"):
@@ -183,27 +205,18 @@ class Hamiltonian():
 
             # diagonal U entries
             if has_U and hasattr(state, "ups") and hasattr(state, "dns"):
-                for j in set(state.ups).intersection(set(state.dns)):
-                    self.diagelements.append([i, L.G.nodes[j]["U"]])
-                    self.diagentries[i] = 0
+                if ((count := len(set(state.ups).intersection(set(state.dns)))) != 0):
+                    self.elements.append([i, i, count, "U"])
+                    self.diagcount = self.diagcount + 1
 
 
-    def make_H(self, fresh=True):
+    def make_H_ts(self, fresh=True):
         if fresh:
             self.zero_H()
         for i, j, factor, tij in self.elements:
             i = i - self.ishift
             j = j - self.ishift
             self.H[i, j] = factor * self.ts[tij]
-        self.diagentries = dict.fromkeys(self.diagentries, 0)
-        for i, U in self.diagelements:
-            self.diagentries[i] = self.diagentries[i] + self.Us[U]
-        for i, d in self.diagentries.items():
-            i = i - self.ishift
-            self.H[i, i] = d
-
 
     def trace(self):
-        return sum(self.diagentries.values())
-    
-    
+        return self.diagcount * self.ts["U"]
